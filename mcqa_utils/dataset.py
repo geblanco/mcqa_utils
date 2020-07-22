@@ -1,10 +1,9 @@
 from typing import List, Union, Callable
 from mcqa_utils.utils import label_to_id
-from mcqa_utils.metric import Metric
-from mcqa_utils.question_answering import QASystem
-from mcqa_utils.utils_multiple_choice import processors, DataProcessor, InputExample
+from mc_transformers.utils_mc import processors, DataProcessor, InputExample
 
 
+# wrapper class around transfomers' DataProcessor
 class Dataset(object):
 
     def __init__(

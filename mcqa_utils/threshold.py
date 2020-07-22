@@ -7,6 +7,8 @@ from utils import argmax, unique, parse_predictions_file
 flags = None
 no_answer = -1
 
+raise RuntimeError('Deprecated module!')
+
 
 def parse_flags():
     parser = argparse.ArgumentParser()
@@ -30,7 +32,7 @@ def sweep(answers, increments):
     for threshold in increments:
         gold_and_labels = []
         for ans in answers:
-            ans.set_threshold(threshold)
+            ans.threshold = threshold
             gold_and_labels.extend(ans.get_pred_tuple())
         gold, labels = list(zip(*gold_and_labels))
         scores.append(c_at_1_by_test(gold, labels, no_answer))
@@ -40,7 +42,7 @@ def sweep(answers, increments):
 
 def apply_threshold(answers, threshold):
     for ans in answers:
-        ans.set_threshold(threshold)
+        ans.threshold = threshold
 
 
 def main():
