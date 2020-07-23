@@ -1,9 +1,6 @@
 language: python
 python:
 - 3.8
-- 3.7
-- 3.6
-- 3.5
 install: pip install -U tox-travis
 script: tox
 deploy:
@@ -11,3 +8,5 @@ deploy:
   username: "__token__"
   password:
     secure: KqAWJthbJ200BUwrj6X3SltWHJvB/IaLet02s8Yav6Ae7pvvtEWWA0QWri1qC4JWZgbEr22JorQ+cdwZSYDffIg37d8z1d5kjI01RF0elgkuA8NXlYZ7EpDH0hdjSpuruZ5AlprZOl/8A4wVn48mldbjaqQOM/vl+AvvwvHwhWCZmCYDShIuReVxR4OYG27fD+4QK9RsClW27Y6LXVie2UpSD22JfHYelik1p6aAgERV5IXD8yTnRb180Ew5vto4sf4yDw8as3T/VAXz2SyXZz8rthsbJ0GVnOdH0k6otyATMSmpYWU1NHlsD37t6fbQeDuv3Wtl3hYxy/bSsB4uUksc/aPb+XIM5pA/k5UUceLDGcy4/pFS4TRr2ObRnFlr+yngJ2qSdYu232gMZnWgiuW+5nLPifG9EOwzkZTy7CHrRAviju48em7XXJ9L6UWJ+/mM/qE1si27kvW1e/h51vd/QLF+gg/fjygbUopILDBDLutmwA0/k3ya/YGkf09EFFCC3uQpiVaHB7HGg0oys6junQZzSg6R7xAVzXbV6CiPnc8g2fIWvvpWYs7N9JmWiM6JTNGoTeVV1YqttEY524n2ACd5NLmqMAuL5rmmab5WMNfedULipb2a1W34nXAC3oQKmcqasc77oZ6oLSnn1Il6kJwQrM5Ympn6DmjlKvw=
+  on:
+    tags: true
