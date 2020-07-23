@@ -5,7 +5,7 @@
 
 import unittest
 
-from mcqa_utils import mcqa_utils
+from mcqa_utils import mcqa_utils  # noqa: F401
 
 
 class TestMcqa_utils(unittest.TestCase):
