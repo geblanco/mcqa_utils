@@ -1,1 +1,1 @@
-tqdm
+git+git://github.com/geblanco/mc_transformers@master

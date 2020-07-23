@@ -3,19 +3,12 @@
 """The setup script."""
 
 from setuptools import setup, find_packages
-import os
 
-if os.path.exists('README.rst'):
-    with open('README.rst') as readme_file:
-        readme = readme_file.read()
-else:
-    readme = ''
+with open('README.rst') as readme_file:
+    readme = readme_file.read()
 
-if os.path.exists('HISTORY.rst'):
-    with open('HISTORY.rst') as history_file:
-        history = history_file.read()
-else:
-    history = ''
+with open('HISTORY.rst') as history_file:
+    history = history_file.read()
 
 requirements = [s.strip() for s in open('requirements.txt', 'r').readlines()] 
 
@@ -23,11 +16,9 @@ setup_requirements = [ ]
 
 test_requirements = [ ]
 
-package_data = { '': ['*.config'] }
-
 setup(
-    author="Guillermo Blanco",
-    author_email='',
+    author="Guillermo E. Blanco",
+    author_email='geblanco@lsi.uned.es',
     python_requires='>=3.5',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
@@ -40,19 +31,23 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
     ],
-    description="Multiple-Choice Question-Answering Utilities to process and evaluate datasets.",
+    description="Multiple Choice Evaluation utilities",
+    entry_points={
+        'console_scripts': [
+            'mcqa_utils=mcqa_utils.mcqa_utils:main',
+        ],
+    },
     install_requires=requirements,
     license="MIT license",
-    long_description='',
+    long_description=readme + '\n\n' + history,
     include_package_data=True,
-    package_data=package_data,
     keywords='mcqa_utils',
     name='mcqa_utils',
-    packages=find_packages(include=['mcqa_utils']),
+    packages=find_packages(include=['mcqa_utils', 'mcqa_utils.*']),
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
-    url='https://github.com/geblanco/mcqa-utils',
+    url='https://github.com/geblanco/mcqa_utils',
     version='0.1.0',
     zip_safe=False,
 )
