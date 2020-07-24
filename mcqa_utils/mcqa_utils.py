@@ -8,7 +8,7 @@ from functools import partial
 from mcqa_utils.dataset import Dataset
 from mcqa_utils.utils import label_to_id
 from mcqa_utils.threshold import Threshold
-from mcqa_utils.metric import C_at_1, Average
+from mcqa_utils.metric import metrics_map
 from mcqa_utils.evaluate import GenericEvaluator
 from mcqa_utils.question_answering import QASystemForMCOffline
 from mcqa_utils.answer import (
@@ -32,6 +32,10 @@ def parse_flags():
         help='Directory where the dataset is stored'
     )
     parser.add_argument(
+        '-s', '--split', default='dev', required=False,
+        help='Split to evaluate from the dataset'
+    )
+    parser.add_argument(
         '-T', '--task', default=None, required=False,
         help='Task to evaluate (default = generic). This '
         'is needed for the dataset processor (see geblanco/mc-transformers)'
@@ -43,6 +47,10 @@ def parse_flags():
     parser.add_argument(
         '-t', '--threshold', default=0.0, required=False,
         help='Apply threshold to all answers'
+    )
+    parser.add_argument(
+        '-m', '--metrics', nargs='*', required=True,
+        help=f'Metrics to apply (available: {", ".join((metrics_map.keys()))})'
     )
     parser.add_argument(
         '-o', '--output', default=None, required=False,
@@ -86,9 +94,12 @@ def main(args=None):
         {'text': no_answer_text, 'match': True}
     )
 
-    split = 'dev'
+    split = args.split
     no_answer = -1
-    metrics = [C_at_1(no_answer=no_answer), Average()]
+    metrics = [metrics_map[met]() for met in args.metrics]
+    for metric in metrics:
+        if metric.needs_no_answer():
+            metric.no_answer = no_answer
 
     dataset = Dataset(data_path=dataset_path, task=args.task)
     data = dataset.get_split(split)

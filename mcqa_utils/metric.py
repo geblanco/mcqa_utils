@@ -8,11 +8,16 @@ class Metric(object):
     def __call__(self, gold_answers: List[Answer], answers: List[Answer]):
         raise NotImplementedError()
 
+    def needs_no_answer(self):
+        return False
+
 
 class Metric_with_no_answer(Metric):
 
-    def __init__(self, no_answer=None):
-        self.no_answer = no_answer
+    no_answer = -1
+
+    def needs_no_answer(self):
+        return True
 
 
 class C_at_1(Metric_with_no_answer):
@@ -47,7 +52,7 @@ class Average(Metric):
 
 class F1(Metric_with_no_answer):
 
-    name = 'F1'
+    name = 'f1'
 
     def __call__(self, gold_answers: List[Answer], answers: List[Answer]):
         if self.no_answer is None:
@@ -60,3 +65,10 @@ class F1(Metric_with_no_answer):
         #                     if answer.get_answer() == self.no_answer]
         # for gold_ans in true_answers:
         #     pass
+
+
+metrics_map = {
+    'C_at_1': C_at_1,
+    'f1': F1,
+    'avg': Average,
+}
