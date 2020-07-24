@@ -13,7 +13,15 @@ def argmax(values: List[Union[float, int]]) -> Union[float, int]:
 def label_to_id(label: Union[str, int, float]) -> int:
     if isinstance(label, (int, float)):
         return label
-    return ord(label.upper()) - ord('A')
+    else:
+        try:
+            # numeric value comes as string
+            label = int(label)
+        except ValueError:
+            # label is in ['A', 'B', 'C', 'D'...]
+            label = ord(label.upper()) - ord('A')
+        finally:
+            return label
 
 
 def unique(values):
@@ -31,6 +39,10 @@ def flatten_dict(lists, keys=None):
         for key in keys:
             flat_array.extend(lists[key])
     return flat_array
+
+
+def flatten(lists):
+    return [elem for sublist in lists for elem in sublist]
 
 
 def sort_dict(_dict):

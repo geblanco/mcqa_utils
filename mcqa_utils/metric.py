@@ -1,23 +1,62 @@
 
+from typing import List
+from mcqa_utils.answer import Answer
+
+
 class Metric(object):
 
-    def __init__(self, no_answer):
-        self.no_answer = no_answer
-
-    def __call__(self, gold_answers, answers):
+    def __call__(self, gold_answers: List[Answer], answers: List[Answer]):
         raise NotImplementedError()
 
 
-class C_at_1(Metric):
+class Metric_with_no_answer(Metric):
 
-    def __call__(self, gold_answers, answers):
-        # Eye on types! (int, str...)
+    def __init__(self, no_answer=None):
+        self.no_answer = no_answer
+
+
+class C_at_1(Metric_with_no_answer):
+
+    name = 'C_at_1'
+
+    def __call__(self, gold_answers: List[Answer], answers: List[Answer]):
         correct = 0
         unanswered = 0
         total = len(gold_answers)
         for gold_ans, ans in zip(gold_answers, answers):
-            if gold_ans == ans:
+            answer_value = ans.get_answer()
+            if gold_ans.get_answer() == answer_value:
                 correct += 1
-            elif ans == self.no_answer:
+            elif answer_value == self.no_answer:
                 unanswered += 1
         return (1 / total) * (correct + (correct / total) * unanswered)
+
+
+class Average(Metric):
+
+    name = 'avg'
+
+    def __call__(self, gold_answers: List[Answer], answers: List[Answer]):
+        correct = 0
+        total = len(gold_answers)
+        for gold_ans, ans in zip(gold_answers, answers):
+            if gold_ans.get_answer() == ans.get_answer():
+                correct += 1
+        return correct / total
+
+
+class F1(Metric_with_no_answer):
+
+    name = 'F1'
+
+    def __call__(self, gold_answers: List[Answer], answers: List[Answer]):
+        if self.no_answer is None:
+            raise ValueError(
+                'To calculate F1 score you need `no_answer` '
+                f'(given = {self.no_answer}'
+            )
+        # true_pos = 0
+        # true_answers = [answer for answer in gold_answers
+        #                     if answer.get_answer() == self.no_answer]
+        # for gold_ans in true_answers:
+        #     pass

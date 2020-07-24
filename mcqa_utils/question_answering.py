@@ -1,7 +1,9 @@
 import os
 import json
-from typing import Union
-from mcqa_utils.answer import parse_answer
+from typing import Union, Tuple, List
+from mcqa_utils.answer import parse_answer, Answer
+
+from mc_transformers.utils_mc import InputExample
 
 
 class QASystem(object):
@@ -15,17 +17,34 @@ class QASystem(object):
                 'if the system is offline!'
             )
 
-    def get_answer(self, example_id: Union[str, int]) -> int:
+    def get_answer(self, example_id: Union[str, int]) -> Answer:
         if self.offline:
             # answers are in a dict, ensure string index access
             example_id = str(example_id)
             if example_id not in self.answers:
                 raise ValueError('Example not found %r' % example_id)
             else:
-                return self.answers[example_id].get_answer()
+                return self.answers[example_id]
         else:
             raise NotImplementedError(
                 'You must implement `get_answer` method!')
+
+    def get_answers(
+        self,
+        data: List[InputExample],
+    ) -> Tuple[List[Answer], List[Union[str, int]]]:
+        # ToDo := parallelize
+        answers = []
+        not_found = []
+        for datapoint in data:
+            try:
+                answer = self.get_answer(datapoint.example_id)
+                answers.append(answer)
+            except ValueError:
+                not_found.append(datapoint.example_id)
+            except NotImplementedError as ex:
+                raise ex
+        return answers, not_found
 
 
 class QASystemForMCOffline(QASystem):

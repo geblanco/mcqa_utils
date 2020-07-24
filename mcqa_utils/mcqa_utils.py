@@ -1,11 +1,20 @@
 """Main module."""
+import json
 import argparse
 
+from pathlib import Path
 from functools import partial
-from mcqa_utils.metric import C_at_1
+
 from mcqa_utils.dataset import Dataset
-from mcqa_utils.evaluator import GenericEvaluator
+from mcqa_utils.utils import label_to_id
+from mcqa_utils.threshold import Threshold
+from mcqa_utils.metric import C_at_1, Average
+from mcqa_utils.evaluate import GenericEvaluator
 from mcqa_utils.question_answering import QASystemForMCOffline
+from mcqa_utils.answer import (
+    input_example_to_answer,
+    apply_threshold_to_answers,
+)
 
 
 def parse_flags():
@@ -23,25 +32,42 @@ def parse_flags():
         help='Directory where the dataset is stored'
     )
     parser.add_argument(
-        '-t', '--task', default=None, required=False,
+        '-T', '--task', default=None, required=False,
         help='Task to evaluate (default = generic). This '
         'is needed for the dataset processor (see geblanco/mc-transformers)'
     )
+    parser.add_argument(
+        '-ft', '--find_threshold', action='store_true', required=False,
+        help='Perfom threshold search over the answers and apply the metrics'
+    )
+    parser.add_argument(
+        '-t', '--threshold', default=0.0, required=False,
+        help='Apply threshold to all answers'
+    )
+    parser.add_argument(
+        '-o', '--output', default=None, required=False,
+        help='Whether to put the results (default = stdout)'
+    )
+    # ToDo := Add metrics
     args = parser.parse_args()
     if args.nbest_predictions is None and args.predictions is None:
         raise ValueError('You must provide some predictions to evalute!')
     return args
 
 
-def answer_mask_fn(equal, sample):
-    ans_index = int(sample.label)
+def answer_mask_fn(mask_cfg, sample):
+    mask_text = mask_cfg['text']
+    keep_if_found = mask_cfg['match']
+    ans_index = label_to_id(sample.label)
     answer = sample.endings[ans_index]
-    found = answer.find('not enough information')
-    keep = (found != -1 and equal) or (found == -1 and not equal)
+    found = answer.find(mask_text) != -1
+    keep = (found and keep_if_found) or (not found and not keep_if_found)
     return keep
 
 
-def main(args):
+def main(args=None):
+    if args is None:
+        args = parse_flags()
     dataset_path = args.dataset
     results_path = (
         args.nbest_predictions
@@ -49,27 +75,65 @@ def main(args):
         else args.predictions
     )
 
-    dataset = Dataset(data_path=dataset_path, task=args.task)
-    evaluator = GenericEvaluator(metric=C_at_1(no_answer=-1))
+    no_answer_text = 'not enough information'
+    partial_answer_mask = partial(
+        answer_mask_fn,
+        {'text': no_answer_text, 'match': False}
+    )
+
+    partial_no_answer_mask = partial(
+        answer_mask_fn,
+        {'text': no_answer_text, 'match': True}
+    )
 
     split = 'dev'
+    no_answer = -1
+    metrics = [C_at_1(no_answer=no_answer), Average()]
 
-    answer_mask = dataset.find_mask(split, partial(answer_mask_fn, False))
-    no_answer_mask = dataset.find_mask(split, partial(answer_mask_fn, True))
+    dataset = Dataset(data_path=dataset_path, task=args.task)
+    data = dataset.get_split(split)
+    gold_answers = [input_example_to_answer(ans) for ans in data]
+    answer_mask = dataset.find_mask(split, partial_answer_mask)
+    no_answer_mask = dataset.find_mask(split, partial_no_answer_mask)
 
     qa_system = QASystemForMCOffline(answers_path=results_path)
-    ans_results = evaluator.evaluate(
-        qa_system, dataset,
-        split, keep=answer_mask
-    )
+    evaluator = GenericEvaluator(metrics=metrics)
+    threshold = Threshold(evaluator)
+
+    answers, missing = qa_system.get_answers(data)
+    assert(len(missing) == 0)
+
+    ans_results = evaluator.evaluate(gold_answers, answers, keep=answer_mask)
     no_ans_results = evaluator.evaluate(
-        qa_system, dataset,
-        split, keep=no_answer_mask
+        gold_answers, answers, keep=no_answer_mask
     )
-    results = evaluator.evaluate(qa_system, dataset, split)
-    print(f'Results over all dataset: {results}')
-    print(f'Results answered questions: {ans_results}')
-    print(f'Results (un)answered questions: {no_ans_results}')
+    if args.threshold > 0.0:
+        apply_threshold_to_answers(answers, args.threshold)
+
+    results = evaluator.evaluate(gold_answers, answers)
+
+    results_dict = dict(
+        **results,
+        has_ans=ans_results,
+        no_has_ans=no_ans_results,
+    )
+
+    if args.find_threshold:
+        best_threshold = threshold.find_best_threshold(
+            metrics[0], gold_answers, answers
+        )
+        apply_threshold_to_answers(answers, best_threshold)
+        threshold_results = evaluator.evaluate(gold_answers, answers)
+        threshold_results['threshold'] = best_threshold
+        results_dict.update(best_threshold=threshold_results)
+
+    results_str = json.dumps(obj=results_dict, indent=2) + '\n'
+    if args.output is None:
+        print(results_str)
+    else:
+        Path(args.output).mkdir(parents=True, exist_ok=True)
+        with open(args.output, 'w') as fout:
+            fout.write(results_str)
 
 
 if __name__ == '__main__':

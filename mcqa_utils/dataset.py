@@ -1,4 +1,6 @@
 from typing import List, Union, Callable
+
+from mcqa_utils.answer import Answer
 from mcqa_utils.utils import label_to_id
 from mc_transformers.utils_mc import processors, DataProcessor, InputExample
 
@@ -80,3 +82,26 @@ class Dataset(object):
             else:
                 mask.append(0)
         return mask
+
+    def apply_no_answer(
+        self,
+        split: Union[List[str], str],
+        answers: List[Answer],
+        text: str,
+    ):
+        data = self.get_splits(split)
+        if len(data) != len(answers):
+            raise ValueError(
+                'Asked to set no answer on a list with different size '
+                'from dataset, maybe you asked for the wrong split?'
+                f'(dataset size {len(data)}, nof answers: {len(answers)})'
+            )
+        for datapoint, answer in zip(data, answers):
+            assert(str(datapoint.example_id) == str(answer.example_id))
+            ans_index = label_to_id(datapoint.label)
+            answer_text = datapoint.endings[ans_index]
+            found = answer_text.find(text) != -1
+            if found and answer.get_answer() == ans_index:
+                print(f'Aplying no answer to {answer.example_id}')
+                answer.is_no_answer = True
+        return answers
