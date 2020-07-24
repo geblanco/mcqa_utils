@@ -7,7 +7,7 @@ mcqa_utils
         :target: https://pypi.python.org/pypi/mcqa_utils
 
 .. image:: https://img.shields.io/travis/geblanco/mcqa_utils.svg
-        :target: https://travis-ci.com/geblanco/mcqa_utils
+        :target: https://travis-ci.org/geblanco/mcqa_utils
 
 .. image:: https://readthedocs.org/projects/mcqa-utils/badge/?version=latest
         :target: https://mcqa-utils.readthedocs.io/en/latest/?badge=latest
