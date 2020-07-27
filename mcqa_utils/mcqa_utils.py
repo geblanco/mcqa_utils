@@ -139,9 +139,13 @@ def main():
     assert(len(missing) == 0)
 
     ans_results = evaluator.evaluate(gold_answers, answers, keep=answer_mask)
-    no_ans_results = evaluator.evaluate(
-        gold_answers, answers, keep=no_answer_mask
-    )
+    if sum(no_answer_mask) == 0:
+        # do not evaluate when there are no unanswerable questions
+        no_ans_results = {}
+    else:
+        no_ans_results = evaluator.evaluate(
+            gold_answers, answers, keep=no_answer_mask
+        )
     if args.threshold > 0.0:
         apply_threshold_to_answers(answers, args.threshold)
 
