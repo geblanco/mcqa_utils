@@ -10,11 +10,11 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = [s.strip() for s in open('requirements.txt', 'r').readlines()] 
+requirements = [s.strip() for s in open('requirements.txt', 'r').readlines()]
 
-setup_requirements = [ ]
+setup_requirements = []
 
-test_requirements = [ ]
+test_requirements = []
 
 setup(
     author="Guillermo E. Blanco",

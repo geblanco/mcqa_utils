@@ -18,6 +18,7 @@ from mcqa_utils.answer import (
 
 FLAGS = None
 
+
 def parse_flags():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -82,6 +83,18 @@ def answer_mask_fn(mask_cfg, sample):
     return keep
 
 
+def get_results(evaluator, gold_answers, answers, masks, prefixes):
+    results = dict()
+    for mask, prefix in zip(masks, prefixes):
+        if sum(mask) > 0:
+            res = evaluator.evaluate(gold_answers, answers, keep=mask)
+            results.update(**{prefix: res})
+
+    global_results = evaluator.evaluate(gold_answers, answers)
+    results.update(**global_results)
+    return results
+
+
 def main():
     global FLAGS
     if FLAGS is None:
@@ -138,23 +151,15 @@ def main():
     answers, missing = qa_system.get_answers(data)
     assert(len(missing) == 0)
 
-    ans_results = evaluator.evaluate(gold_answers, answers, keep=answer_mask)
-    if sum(no_answer_mask) == 0:
-        # do not evaluate when there are no unanswerable questions
-        no_ans_results = {}
-    else:
-        no_ans_results = evaluator.evaluate(
-            gold_answers, answers, keep=no_answer_mask
-        )
-    if args.threshold > 0.0:
-        apply_threshold_to_answers(answers, args.threshold)
+    masks = (answer_mask, no_answer_mask)
+    prefix = ('has_ans', 'no_has_ans')
 
-    results = evaluator.evaluate(gold_answers, answers)
-
-    results_dict = dict(
-        **results,
-        has_ans=ans_results,
-        no_has_ans=no_ans_results,
+    results_dict = get_results(
+         evaluator,
+         gold_answers,
+         answers,
+         masks,
+         prefix,
     )
 
     if args.find_threshold:
@@ -162,7 +167,13 @@ def main():
             metrics[0], gold_answers, answers
         )
         apply_threshold_to_answers(answers, best_threshold)
-        threshold_results = evaluator.evaluate(gold_answers, answers)
+        threshold_results = get_results(
+            evaluator,
+            gold_answers,
+            answers,
+            masks,
+            prefix
+        )
         threshold_results['threshold'] = best_threshold
         results_dict.update(best_threshold=threshold_results)
 
@@ -173,7 +184,7 @@ def main():
         if args.merge and prev_output is not None:
             prev_output.update(**results_dict)
             results_str = json.dumps(obj=prev_output, indent=2) + '\n'
-        
+
         with open(args.output, 'w') as fout:
             fout.write(results_str)
 
