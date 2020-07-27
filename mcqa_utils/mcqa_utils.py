@@ -16,6 +16,7 @@ from mcqa_utils.answer import (
     apply_threshold_to_answers,
 )
 
+FLAGS = None
 
 def parse_flags():
     parser = argparse.ArgumentParser()
@@ -73,9 +74,11 @@ def answer_mask_fn(mask_cfg, sample):
     return keep
 
 
-def main(args=None):
-    if args is None:
-        args = parse_flags()
+def main():
+    global FLAGS
+    if FLAGS is None:
+        FLAGS = parse_flags()
+    args = FLAGS
     dataset_path = args.dataset
     results_path = (
         args.nbest_predictions
@@ -148,4 +151,4 @@ def main(args=None):
 
 
 if __name__ == '__main__':
-    main(parse_flags())
+    main()
