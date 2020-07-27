@@ -57,6 +57,14 @@ def parse_flags():
         '-o', '--output', default=None, required=False,
         help='Whether to put the results (default = stdout)'
     )
+    parser.add_argument(
+        '--overwrite', action='store_true', required=False,
+        help='Overwrite output file (default false)'
+    )
+    parser.add_argument(
+        '--merge', action='store_true', required=False,
+        help='Whether to merge output file with previous output'
+    )
     # ToDo := Add metrics
     args = parser.parse_args()
     if args.nbest_predictions is None and args.predictions is None:
@@ -79,6 +87,19 @@ def main():
     if FLAGS is None:
         FLAGS = parse_flags()
     args = FLAGS
+    if args.output is not None:
+        output_file = Path(args.output)
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        if output_file.exists() and not args.overwrite and not args.merge:
+            raise RuntimeError(
+                'Output file already exists!\n'
+                'Pass --overwrite or --merge to overcome'
+            )
+        elif args.merge:
+            prev_output = json.load(open(args.output, 'r'))
+    else:
+        prev_output = None
+
     dataset_path = args.dataset
     results_path = (
         args.nbest_predictions
@@ -145,7 +166,10 @@ def main():
     if args.output is None:
         print(results_str)
     else:
-        Path(args.output).mkdir(parents=True, exist_ok=True)
+        if args.merge and prev_output is not None:
+            prev_output.update(**results_dict)
+            results_str = json.dumps(obj=prev_output, indent=2) + '\n'
+        
         with open(args.output, 'w') as fout:
             fout.write(results_str)
 
