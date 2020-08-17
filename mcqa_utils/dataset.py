@@ -1,4 +1,8 @@
+import random
+
+from glob import glob
 from typing import List, Union, Callable
+from collections import defaultdict
 
 from mcqa_utils.answer import Answer
 from mcqa_utils.utils import label_to_id
@@ -30,6 +34,28 @@ class Dataset(object):
             'test': self.get_test_examples,
         }
 
+    def _make_contiguous_ids(self, global_id, examples):
+        correct_examples = []
+        # make ids contiguous
+        for index, example in enumerate(examples):
+            ex_id = self.processor._decode_id(example.example_id)
+            context_id, question_id = int(ex_id[0]), int(ex_id[1])
+            context_id += global_id
+            correct_examples.append(
+                InputExample(
+                    example_id=self.processor._encode_id(
+                        context_id, question_id
+                    ),
+                    question=example.question,
+                    contexts=example.contexts,
+                    endings=example.endings,
+                    label=example.label,
+                )
+            )
+            if index == (len(examples) - 1):
+                global_id = context_id
+        return global_id, correct_examples
+
     # these get functions are probably not needed
     def get_train_examples(self) -> List[InputExample]:
         return self.processor.get_train_examples(self.data_path)
@@ -39,6 +65,19 @@ class Dataset(object):
 
     def get_test_examples(self) -> List[InputExample]:
         return self.processor.get_test_examples(self.data_path)
+
+    def get_all_examples(self, dir=None) -> List[InputExample]:
+        if dir is None:
+            dir = self.data_path + '/*.json'
+        globbed_dir = dir
+        glob_id = 0
+        all_examples = []
+        for file in glob(globbed_dir):
+            examples = self.processor._read_examples(file, 'glob')
+            print(f'Parsed {file}, found {len(examples)} examples')
+            glob_id, examples = self._make_contiguous_ids(glob_id, examples)
+            all_examples.extend(examples)
+        return all_examples
 
     def get_split(self, split: str) -> List[InputExample]:
         if split not in self.splits:
@@ -82,6 +121,47 @@ class Dataset(object):
             else:
                 mask.append(0)
         return mask
+
+    def to_json(self, examples):
+        json_examples = {'version': 1.0, 'data': []}
+        raw_examples = defaultdict(list)
+        for sample in examples:
+            context_id, _ = self.processor._decode_id(sample.example_id)
+            try:
+                context_id = int(context_id)
+            except Exception:
+                pass
+            raw_examples[context_id].append(sample)
+        for id, grouped in raw_examples.items():
+            json_ex = {
+                'id': id,
+                'article': grouped[0].contexts[0],
+                'answers': [chr(int(ex.label) + ord('A')) for ex in grouped],
+                'options': [ex.endings for ex in grouped],
+                'questions': [ex.question for ex in grouped],
+            }
+            json_examples['data'].append(json_ex)
+        return json_examples
+
+    def split_examples(self, examples, proportions, seed=None):
+        if seed is not None:
+            random.seed(seed)
+        randomized = random.sample(examples, len(examples))
+        if round(sum(proportions)) != 1:
+            raise ValueError(
+                'Proportions must sum to 1 for splitting! '
+                f'Got ({proportions} = {sum(proportions)}) instead.'
+            )
+        splits = []
+        start_idx, end_idx = 0, 0
+        total_size = len(randomized)
+        for prop in proportions:
+            split_size = round(total_size * prop)
+            end_idx = min(end_idx + split_size, total_size)
+            splits.append(randomized[start_idx:end_idx])
+            start_idx = end_idx
+
+        return splits
 
     # deprecated
     def apply_no_answer(
