@@ -155,11 +155,11 @@ def main():
     prefix = ('has_ans', 'no_has_ans')
 
     results_dict = get_results(
-         evaluator,
-         gold_answers,
-         answers,
-         masks,
-         prefix,
+        evaluator,
+        gold_answers,
+        answers,
+        masks,
+        prefix,
     )
 
     if args.find_threshold:

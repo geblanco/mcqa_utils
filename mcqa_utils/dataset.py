@@ -83,6 +83,7 @@ class Dataset(object):
                 mask.append(0)
         return mask
 
+    # deprecated
     def apply_no_answer(
         self,
         split: Union[List[str], str],
