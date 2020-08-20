@@ -2,4 +2,4 @@
 
 __author__ = """Guillermo E. Blanco"""
 __email__ = 'geblanco@lsi.uned.es'
-__version__ = '0.1.8'
+__version__ = '0.1.9'
