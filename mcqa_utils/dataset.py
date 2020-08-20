@@ -163,6 +163,15 @@ class Dataset(object):
 
         return splits
 
+    def iter_examples(self, examples):
+        for ex in examples:
+            num_labels = '0123456789'
+            if ex.label in num_labels:
+                label = int(ex.label)
+            elif not isinstance(ex.label, int):
+                label = ord(ex.label.upper()) - ord('A')
+            yield ex.example_id, ex.contexts[0], ex.question, ex.endings, label
+
     # deprecated
     def apply_no_answer(
         self,
