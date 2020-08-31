@@ -55,7 +55,7 @@ class QASystemForMCOffline(QASystem):
         raw_answers = self.load_predictions(self.answers_path)
         self.answers = self.parse_predictions(raw_answers)
 
-    def parse_predictions(raw_answers: dict) -> dict:
+    def parse_predictions(self, raw_answers: dict) -> dict:
         answers = {}
         # raw_answers can come as predictions or nbest-predictions
         if isinstance(raw_answers[0], list):
