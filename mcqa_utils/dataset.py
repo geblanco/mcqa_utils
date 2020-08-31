@@ -113,6 +113,19 @@ class Dataset(object):
     def decode_id(self, id: str) -> str:
         return self.processor._decode_id(id)
 
+    def get_gold_answers(self, splits: Union[List[str], str]) -> List[Answer]:
+        answers = []
+        data = self.get_splits(splits)
+        for example in data:
+            example_id = '-'.join(self.decode_id(example.example_id))
+            answers.append(Answer(
+                example_id=example_id,
+                label=example.label,
+                pred_label=example.label,
+            ))
+
+        return answers
+
     def find_mask(self, split: Union[List[str], str], test_fn: Callable):
         mask = []
         for sample in self.get_splits(split):

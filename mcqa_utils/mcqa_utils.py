@@ -11,10 +11,7 @@ from mcqa_utils.threshold import Threshold
 from mcqa_utils.metric import metrics_map
 from mcqa_utils.evaluate import GenericEvaluator
 from mcqa_utils.question_answering import QASystemForMCOffline
-from mcqa_utils.answer import (
-    input_example_to_answer,
-    apply_threshold_to_answers,
-)
+from mcqa_utils.answer import apply_threshold_to_answers
 
 FLAGS = None
 
@@ -139,8 +136,7 @@ def main():
             metric.no_answer = no_answer
 
     dataset = Dataset(data_path=dataset_path, task=args.task)
-    data = dataset.get_split(split)
-    gold_answers = [input_example_to_answer(ans) for ans in data]
+    gold_answers = dataset.get_gold_answers(split)
     answer_mask = dataset.find_mask(split, partial_answer_mask)
     no_answer_mask = dataset.find_mask(split, partial_no_answer_mask)
 
@@ -148,7 +144,7 @@ def main():
     evaluator = GenericEvaluator(metrics=metrics)
     threshold = Threshold(evaluator)
 
-    answers, missing = qa_system.get_answers(data)
+    answers, missing = qa_system.get_answers(dataset.get_split(split))
     assert(len(missing) == 0)
 
     masks = (answer_mask, no_answer_mask)

@@ -1,6 +1,5 @@
 from typing import List, Tuple
 from mcqa_utils.utils import argmax, label_to_id
-from mc_transformers.utils_mc import InputExample
 
 
 class Answer(object):
@@ -63,14 +62,6 @@ def parse_answer(answer_id, answer_value):
             label=answer_value['label']
         )
     return Answer(**answer_dict)
-
-
-def input_example_to_answer(example: InputExample) -> Answer:
-    return Answer(
-        example_id=example.example_id,
-        label=example.label,
-        pred_label=example.label,
-    )
 
 
 def apply_threshold_to_answers(answers: List[Answer], threshold: float):
