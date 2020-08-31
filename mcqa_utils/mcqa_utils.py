@@ -75,10 +75,10 @@ def parse_flags():
 
 
 def answer_mask_fn(mask_cfg, sample):
-    mask_text = mask_cfg['text']
+    mask_text = mask_cfg['text'].lower()
     keep_if_found = mask_cfg['match']
     ans_index = label_to_id(sample.label)
-    answer = sample.endings[ans_index]
+    answer = sample.endings[ans_index].lower()
     found = answer.find(mask_text) != -1
     keep = (found and keep_if_found) or (not found and not keep_if_found)
     return keep
@@ -144,7 +144,7 @@ def main():
     prefix = None
 
     if args.no_answer_text is not None:
-        no_answer_text = 'not enough information'
+        no_answer_text = args.no_answer_text
 
         partial_answer_mask = partial(
             answer_mask_fn,

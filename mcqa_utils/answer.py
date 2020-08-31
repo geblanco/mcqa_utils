@@ -68,3 +68,9 @@ def apply_threshold_to_answers(answers: List[Answer], threshold: float):
     for ans in answers:
         ans.threshold = threshold
     return answers
+
+
+def apply_no_answer(answers: List[Answer], no_answer_label_ids: List[str]):
+    for ans, no_ans_label_id in zip(answers, no_answer_label_ids):
+        if ans.get_answer() == no_ans_label_id:
+            ans.is_no_answer = True
