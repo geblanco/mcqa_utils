@@ -3,8 +3,6 @@ import json
 from typing import Union, Tuple, List
 from mcqa_utils.answer import parse_answer, Answer
 
-from mc_transformers.utils_mc import InputExample
-
 
 class QASystem(object):
     def __init__(self, offline: bool = True, answers_path: str = None):
@@ -31,7 +29,7 @@ class QASystem(object):
 
     def get_answers(
         self,
-        data: List[InputExample],
+        data: List[Answer],
     ) -> Tuple[List[Answer], List[Union[str, int]]]:
         # ToDo := parallelize
         answers = []
@@ -57,9 +55,10 @@ class QASystemForMCOffline(QASystem):
 
     def parse_predictions(self, raw_answers: dict) -> dict:
         answers = {}
+        first_answer_key = list(raw_answers.keys())[0]
         # raw_answers can come as predictions or nbest-predictions
-        if isinstance(raw_answers[0], list):
-            for context_id, context_answers in raw_answers:
+        if isinstance(raw_answers[first_answer_key], list):
+            for context_id, context_answers in raw_answers.items():
                 for answer_id, answer_value in enumerate(context_answers):
                     if answer_id < 10:
                         answer_id = f'0{answer_id}'

@@ -144,7 +144,7 @@ def main():
     evaluator = GenericEvaluator(metrics=metrics)
     threshold = Threshold(evaluator)
 
-    answers, missing = qa_system.get_answers(dataset.get_split(split))
+    answers, missing = qa_system.get_answers(gold_answers)
     assert(len(missing) == 0)
 
     masks = (answer_mask, no_answer_mask)
