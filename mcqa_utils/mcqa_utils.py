@@ -63,6 +63,10 @@ def parse_flags():
         '--merge', action='store_true', required=False,
         help='Whether to merge output file with previous output'
     )
+    parser.add_argument(
+        '--no_answer_text', type=str, required=False, default=None,
+        help='Text of an unaswerable question answer'
+    )
     # ToDo := Add metrics
     args = parser.parse_args()
     if args.nbest_predictions is None and args.predictions is None:
@@ -80,12 +84,13 @@ def answer_mask_fn(mask_cfg, sample):
     return keep
 
 
-def get_results(evaluator, gold_answers, answers, masks, prefixes):
+def get_results(evaluator, gold_answers, answers, masks=None, prefixes=None):
     results = dict()
-    for mask, prefix in zip(masks, prefixes):
-        if sum(mask) > 0:
-            res = evaluator.evaluate(gold_answers, answers, keep=mask)
-            results.update(**{prefix: res})
+    if masks is not None and prefixes is not None:
+        for mask, prefix in zip(masks, prefixes):
+            if sum(mask) > 0:
+                res = evaluator.evaluate(gold_answers, answers, keep=mask)
+                results.update(**{prefix: res})
 
     global_results = evaluator.evaluate(gold_answers, answers)
     results.update(**global_results)
@@ -117,17 +122,6 @@ def main():
         else args.predictions
     )
 
-    no_answer_text = 'not enough information'
-    partial_answer_mask = partial(
-        answer_mask_fn,
-        {'text': no_answer_text, 'match': False}
-    )
-
-    partial_no_answer_mask = partial(
-        answer_mask_fn,
-        {'text': no_answer_text, 'match': True}
-    )
-
     split = args.split
     no_answer = -1
     metrics = [metrics_map[met]() for met in args.metrics]
@@ -137,8 +131,6 @@ def main():
 
     dataset = Dataset(data_path=dataset_path, task=args.task)
     gold_answers = dataset.get_gold_answers(split)
-    answer_mask = dataset.find_mask(split, partial_answer_mask)
-    no_answer_mask = dataset.find_mask(split, partial_no_answer_mask)
 
     qa_system = QASystemForMCOffline(answers_path=results_path)
     evaluator = GenericEvaluator(metrics=metrics)
@@ -147,8 +139,27 @@ def main():
     answers, missing = qa_system.get_answers(gold_answers)
     assert(len(missing) == 0)
 
-    masks = (answer_mask, no_answer_mask)
-    prefix = ('has_ans', 'no_has_ans')
+    no_answer_text = None
+    masks = None
+    prefix = None
+
+    if args.no_answer_text is not None:
+        no_answer_text = 'not enough information'
+
+        partial_answer_mask = partial(
+            answer_mask_fn,
+            {'text': no_answer_text, 'match': False}
+        )
+
+        partial_no_answer_mask = partial(
+            answer_mask_fn,
+            {'text': no_answer_text, 'match': True}
+        )
+
+        answer_mask = dataset.find_mask(split, partial_answer_mask)
+        no_answer_mask = dataset.find_mask(split, partial_no_answer_mask)
+        masks = (answer_mask, no_answer_mask)
+        prefix = ('has_ans', 'no_has_ans')
 
     results_dict = get_results(
         evaluator,
