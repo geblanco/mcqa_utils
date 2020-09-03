@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from mcqa_utils.utils import argmax, label_to_id
 
 
@@ -9,19 +9,23 @@ class Answer(object):
         pred_label: str,
         label: str = None,
         probs: List[float] = None,
+        endings: Optional[List[str]] = None,
         threshold: float = 0.0,
         no_answer: float = -1.0,
+        no_answer_text: str = None,
         is_no_answer: bool = False,
     ):
         self.example_id = example_id
-        self.probs = probs
-        self.label = label
         self.pred_label = pred_label
-        self.threshold = 0.0
-        self.no_answer = -1.0
+        self.label = label
+        self.probs = probs
+        self.endings = endings
+        self.threshold = threshold
+        self.no_answer = no_answer
+        self.no_answer_text = no_answer_text
         self.is_no_answer = is_no_answer
 
-    def get_answer(self) -> int:
+    def get_answer(self, accept_no_answer=True) -> int:
         ans = label_to_id(self.pred_label)
         if self.is_no_answer:
             ans = self.no_answer
@@ -29,6 +33,9 @@ class Answer(object):
             ans = self.no_answer
             if max(self.probs) > self.threshold:
                 ans = argmax(self.probs)
+
+        if ans == self.no_answer and not accept_no_answer:
+            ans = self.search_unanswerable_option()
         return ans
 
     def get_pred_tuple(self) -> List[Tuple[str, float]]:
@@ -40,15 +47,27 @@ class Answer(object):
     def get_max_prob(self) -> float:
         return max(self.probs)
 
+    def search_unanswerable_option(self):
+        unanswerable_option_index = self.no_answer
+        if self.no_answer_text is not None and self.endings is not None:
+            for idx, end in enumerate(self.endings):
+                if end.lower() == self.no_answer_text.lower():
+                    unanswerable_option_index = idx
+                    break
+        print(f'Found the index {unanswerable_option_index}')
+        return unanswerable_option_index
+
     @staticmethod
     def clone(answer):
         return Answer(
             example_id=answer.example_id,
             probs=answer.probs,
+            endings=answer.endings,
             label=answer.label,
             pred_label=answer.pred_label,
             threshold=answer.threshold,
             no_answer=answer.no_answer,
+            no_answer_text=answer.no_answer_text,
             is_no_answer=answer.is_no_answer,
         )
 

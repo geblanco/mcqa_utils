@@ -84,17 +84,45 @@ def answer_mask_fn(mask_cfg, sample):
     return keep
 
 
-def get_results(evaluator, gold_answers, answers, masks=None, prefixes=None):
+def get_results(
+    dataset,
+    evaluator,
+    gold_answers,
+    answers,
+    masks=None,
+    prefixes=None
+):
     results = dict()
     if masks is not None and prefixes is not None:
         for mask, prefix in zip(masks, prefixes):
             if sum(mask) > 0:
-                res = evaluator.evaluate(gold_answers, answers, keep=mask)
+                gold_reduced = dataset.reduce_by_mask(gold_answers, mask)
+                answers_reduced = dataset.reduce_by_mask(gold_answers, mask)
+                res = evaluator.evaluate(gold_reduced, answers_reduced)
                 results.update(**{prefix: res})
 
     global_results = evaluator.evaluate(gold_answers, answers)
     results.update(**global_results)
     return results
+
+
+def get_masks_and_prefix(dataset, no_answer_text, split):
+    partial_answer_mask = partial(
+        answer_mask_fn,
+        {'text': no_answer_text, 'match': False}
+    )
+
+    partial_no_answer_mask = partial(
+        answer_mask_fn,
+        {'text': no_answer_text, 'match': True}
+    )
+
+    answer_mask = dataset.find_mask(split, partial_answer_mask)
+    no_answer_mask = dataset.find_mask(split, partial_no_answer_mask)
+    masks = (answer_mask, no_answer_mask)
+    prefix = ('has_ans', 'no_has_ans')
+
+    return masks, prefix
 
 
 def main():
@@ -130,38 +158,33 @@ def main():
             metric.no_answer = no_answer
 
     dataset = Dataset(data_path=dataset_path, task=args.task)
-    gold_answers = dataset.get_gold_answers(split)
-
     qa_system = QASystemForMCOffline(answers_path=results_path)
     evaluator = GenericEvaluator(metrics=metrics)
     threshold = Threshold(evaluator)
 
-    answers, missing = qa_system.get_answers(gold_answers)
+    # when `no_answer_text` is provided, avg can be optimized with the
+    # threshold to answer the option with the text corresponding to
+    # not being able to solve the question
+    if args.no_answer_text:
+        gold_answers = dataset.get_gold_answers(split, with_text_values=True)
+        answers, missing = qa_system.get_answers(
+            gold_answers,
+            with_text_values=True,
+            no_answer_text=args.no_answer_text,
+        )
+        masks, prefix = get_masks_and_prefix(
+            dataset, args.no_answer_text, split
+        )
+    else:
+        gold_answers = dataset.get_gold_answers(split)
+        answers, missing = qa_system.get_answers(gold_answers)
+        masks = None
+        prefix = None
+
     assert(len(missing) == 0)
 
-    no_answer_text = None
-    masks = None
-    prefix = None
-
-    if args.no_answer_text is not None:
-        no_answer_text = args.no_answer_text
-
-        partial_answer_mask = partial(
-            answer_mask_fn,
-            {'text': no_answer_text, 'match': False}
-        )
-
-        partial_no_answer_mask = partial(
-            answer_mask_fn,
-            {'text': no_answer_text, 'match': True}
-        )
-
-        answer_mask = dataset.find_mask(split, partial_answer_mask)
-        no_answer_mask = dataset.find_mask(split, partial_no_answer_mask)
-        masks = (answer_mask, no_answer_mask)
-        prefix = ('has_ans', 'no_has_ans')
-
     results_dict = get_results(
+        dataset,
         evaluator,
         gold_answers,
         answers,
@@ -170,19 +193,21 @@ def main():
     )
 
     if args.find_threshold:
-        best_threshold = threshold.find_best_threshold(
-            metrics[0], gold_answers, answers
-        )
-        apply_threshold_to_answers(answers, best_threshold)
-        threshold_results = get_results(
-            evaluator,
-            gold_answers,
-            answers,
-            masks,
-            prefix
-        )
-        threshold_results['threshold'] = best_threshold
-        results_dict.update(best_threshold=threshold_results)
+        for metric in metrics:
+            best_threshold = threshold.find_best_threshold(
+                metric, gold_answers, answers
+            )
+            apply_threshold_to_answers(answers, best_threshold)
+            threshold_results = get_results(
+                dataset,
+                evaluator,
+                gold_answers,
+                answers,
+                masks,
+                prefix
+            )
+            threshold_results[f'threshold.{metric.name}'] = best_threshold
+            results_dict.update(best_threshold=threshold_results)
 
     results_str = json.dumps(obj=results_dict, indent=2) + '\n'
     if args.output is None:

@@ -113,16 +113,24 @@ class Dataset(object):
     def decode_id(self, id: str) -> str:
         return self.processor._decode_id(id)
 
-    def get_gold_answers(self, splits: Union[List[str], str]) -> List[Answer]:
+    def get_gold_answers(
+        self,
+        splits: Union[List[str], str],
+        with_text_values: bool = False
+    ) -> List[Answer]:
         answers = []
         data = self.get_splits(splits)
         for example in data:
             example_id = '-'.join(self.decode_id(example.example_id))
-            answers.append(Answer(
+            answer_dict = dict(
                 example_id=example_id,
                 label=example.label,
-                pred_label=example.label,
-            ))
+                pred_label=example.label
+            )
+            if with_text_values:
+                answer_dict.update(endings=example.endings)
+
+            answers.append(Answer(**answer_dict))
 
         return answers
 
@@ -184,6 +192,14 @@ class Dataset(object):
             elif not isinstance(ex.label, int):
                 label = ord(ex.label.upper()) - ord('A')
             yield ex.example_id, ex.contexts[0], ex.question, ex.endings, label
+
+    def reduce_by_mask(self, data: List, mask: List) -> List:
+        end_list = []
+        for point, keep in zip(data, mask):
+            if bool(keep):
+                end_list.append(point)
+
+        return end_list
 
     # deprecated
     def apply_no_answer(

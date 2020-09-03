@@ -16,27 +16,34 @@ class QASystem(object):
             )
 
     def get_answer(self, example_id: Union[str, int]) -> Answer:
-        if self.offline:
-            # answers are in a dict, ensure string index access
-            example_id = str(example_id)
-            if example_id not in self.answers:
-                raise ValueError('Example not found %r' % example_id)
-            else:
-                return self.answers[example_id]
-        else:
-            raise NotImplementedError(
-                'You must implement `get_answer` method!')
+        raise NotImplementedError(
+            'You must implement `get_answer` method!')
 
     def get_answers(
         self,
         data: List[Answer],
+        with_text_values: bool = False,
+        no_answer_text: str = None
     ) -> Tuple[List[Answer], List[Union[str, int]]]:
         # ToDo := parallelize
         answers = []
         not_found = []
+        if with_text_values and (
+            data[0].endings is None or
+            no_answer_text is None
+        ):
+            raise ValueError(
+                'Asked for answers with text options but dataset doesn\'t '
+                'contain text endings or `no_answer_text` was not provided,'
+                ' pass `dataset.get_gold_answers(with_text_values=True) to '
+                'parse text endings in dataset!'
+            )
         for datapoint in data:
             try:
                 answer = self.get_answer(datapoint.example_id)
+                if with_text_values:
+                    answer.endings = datapoint.endings
+                    answer.no_answer_text = no_answer_text
                 answers.append(answer)
             except ValueError:
                 not_found.append(datapoint.example_id)
@@ -52,6 +59,14 @@ class QASystemForMCOffline(QASystem):
         super(QASystemForMCOffline, self).__init__(offline, answers_path)
         raw_answers = self.load_predictions(self.answers_path)
         self.answers = self.parse_predictions(raw_answers)
+
+    def get_answer(self, example_id: Union[str, int]) -> Answer:
+        # answers are in a dict, ensure string index access
+        example_id = str(example_id)
+        if example_id not in self.answers:
+            raise ValueError('Example not found %r' % example_id)
+        else:
+            return self.answers[example_id]
 
     def parse_predictions(self, raw_answers: dict) -> dict:
         answers = {}

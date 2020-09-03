@@ -4,20 +4,17 @@ from mcqa_utils.answer import Answer
 
 
 class Metric(object):
+    no_answer = None
 
     def __call__(self, gold_answers: List[Answer], answers: List[Answer]):
         raise NotImplementedError()
 
     def needs_no_answer(self):
-        return False
+        return self.no_answer is not None
 
 
 class Metric_with_no_answer(Metric):
-
     no_answer = -1
-
-    def needs_no_answer(self):
-        return True
 
 
 class C_at_1(Metric_with_no_answer):
@@ -45,7 +42,9 @@ class Average(Metric):
         correct = 0
         total = len(gold_answers)
         for gold_ans, ans in zip(gold_answers, answers):
-            if gold_ans.get_answer() == ans.get_answer():
+            # allow answers to search for the option with unanswerable text
+            ans_opt = ans.get_answer(accept_no_answer=self.needs_no_answer())
+            if gold_ans.get_answer() == ans_opt:
                 correct += 1
         return correct / total
 
