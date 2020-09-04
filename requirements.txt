@@ -1,1 +1,1 @@
-mc_transformers
+mc_transformers==0.1.8
