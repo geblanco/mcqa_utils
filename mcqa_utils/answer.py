@@ -54,7 +54,7 @@ class Answer(object):
                 if end.lower() == self.no_answer_text.lower():
                     unanswerable_option_index = idx
                     break
-        print(f'Found the index {unanswerable_option_index}')
+
         return unanswerable_option_index
 
     @staticmethod
