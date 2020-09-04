@@ -206,8 +206,9 @@ def main():
                 masks,
                 prefix
             )
-            threshold_results[f'threshold.{metric.name}'] = best_threshold
-            results_dict.update(best_threshold=threshold_results)
+            threshold_results['threshold'] = best_threshold
+            threshold_name = f'{metric.name}_threshold'
+            results_dict.update(**{threshold_name: threshold_results})
 
     results_str = json.dumps(obj=results_dict, indent=2) + '\n'
     if args.output is None:
