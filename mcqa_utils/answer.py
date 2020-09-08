@@ -61,8 +61,8 @@ class Answer(object):
     def clone(answer):
         return Answer(
             example_id=answer.example_id,
-            probs=answer.probs,
-            endings=answer.endings,
+            probs=answer.probs.copy(),
+            endings=answer.endings.copy(),
             label=answer.label,
             pred_label=answer.pred_label,
             threshold=answer.threshold,
