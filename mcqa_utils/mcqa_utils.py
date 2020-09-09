@@ -11,7 +11,10 @@ from mcqa_utils.threshold import Threshold
 from mcqa_utils.metric import metrics_map
 from mcqa_utils.evaluate import GenericEvaluator
 from mcqa_utils.question_answering import QASystemForMCOffline
-from mcqa_utils.answer import apply_threshold_to_answers
+from mcqa_utils.answer import (
+    apply_threshold_to_answers,
+    apply_prob_field_to_answers,
+)
 
 FLAGS = None
 
@@ -44,7 +47,7 @@ def parse_flags():
         help='Perfom threshold search over the answers and apply the metrics'
     )
     parser.add_argument(
-        '-t', '--threshold', default=0.0, required=False,
+        '-t', '--threshold', default=None, required=False, type=float,
         help='Apply threshold to all answers'
     )
     parser.add_argument(
@@ -67,6 +70,11 @@ def parse_flags():
         '--no_answer_text', type=str, required=False, default=None,
         help='Text of an unaswerable question answer'
     )
+    parser.add_argument(
+        '-pf', '--probs_field', type=str, required=False, default=None,
+        help='Field to use as `probs` field in prediction answers '
+        '(default probs, but can be anything parsed in the answer)'
+    )
     # ToDo := Add metrics
     args = parser.parse_args()
     if args.nbest_predictions is None and args.predictions is None:
@@ -82,28 +90,6 @@ def answer_mask_fn(mask_cfg, sample):
     found = answer.find(mask_text) != -1
     keep = (found and keep_if_found) or (not found and not keep_if_found)
     return keep
-
-
-def get_results(
-    dataset,
-    evaluator,
-    gold_answers,
-    answers,
-    masks=None,
-    prefixes=None
-):
-    results = dict()
-    if masks is not None and prefixes is not None:
-        for mask, prefix in zip(masks, prefixes):
-            if sum(mask) > 0:
-                gold_reduced = dataset.reduce_by_mask(gold_answers, mask)
-                answers_reduced = dataset.reduce_by_mask(gold_answers, mask)
-                res = evaluator.evaluate(gold_reduced, answers_reduced)
-                results.update(**{prefix: res})
-
-    global_results = evaluator.evaluate(gold_answers, answers)
-    results.update(**global_results)
-    return results
 
 
 def get_masks_and_prefix(dataset, no_answer_text, split):
@@ -123,6 +109,28 @@ def get_masks_and_prefix(dataset, no_answer_text, split):
     prefix = ('has_ans', 'no_has_ans')
 
     return masks, prefix
+
+
+def get_results(
+    dataset,
+    evaluator,
+    gold_answers,
+    answers,
+    masks=None,
+    prefixes=None
+):
+    results = dict()
+    if masks is not None and prefixes is not None:
+        for mask, prefix in zip(masks, prefixes):
+            if sum(mask) > 0:
+                gold_reduced = dataset.reduce_by_mask(gold_answers, mask)
+                answers_reduced = dataset.reduce_by_mask(answers, mask)
+                res = evaluator.evaluate(gold_reduced, answers_reduced)
+                results.update(**{prefix: res})
+
+    global_results = evaluator.evaluate(gold_answers, answers)
+    results.update(**global_results)
+    return results
 
 
 def main():
@@ -182,6 +190,17 @@ def main():
         prefix = None
 
     assert(len(missing) == 0)
+
+    if args.probs_field is not None:
+        apply_prob_field_to_answers(answers, args.probs_field)
+        # new probs field is not necessary contrained to between 0 and 1
+        # search for the lowest and set it as threshold to ensure fair
+        # comparison
+        min_prob = min([ans.get_min_prob() for ans in answers])
+        apply_threshold_to_answers(answers, min_prob - 1.0)
+
+    if args.threshold is not None:
+        apply_threshold_to_answers(answers, args.threshold)
 
     results_dict = get_results(
         dataset,

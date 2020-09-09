@@ -1,7 +1,13 @@
 import os
 import json
+
+from collections import defaultdict
 from typing import Union, Tuple, List
-from mcqa_utils.answer import parse_answer, Answer
+from mcqa_utils.answer import (
+    parse_answer,
+    unparse_answer,
+    Answer,
+)
 
 
 class QASystem(object):
@@ -51,6 +57,9 @@ class QASystem(object):
                 raise ex
         return answers, not_found
 
+    def get_all_answers(self) -> List[Answer]:
+        return list(self.answers.values())
+
 
 class QASystemForMCOffline(QASystem):
 
@@ -84,6 +93,25 @@ class QASystemForMCOffline(QASystem):
                 answers[ans_id] = parse_answer(ans_id, ans_value)
 
         return answers
+
+    def unparse_predictions(self, answers: list = None) -> dict:
+        if answers is None:
+            answers = list(self.answers.values())
+        first_answer = answers[0]
+        if isinstance(unparse_answer(first_answer), (int, str)):
+            output_dict = {}
+            is_nbest_predictions = False
+        else:
+            output_dict = defaultdict(list)
+            is_nbest_predictions = True
+        for ans in answers:
+            ans_id = str(ans.example_id)
+            if is_nbest_predictions:
+                ans_id = str(ans_id).split('-')[0]
+                output_dict[ans_id].append(unparse_answer(ans))
+            else:
+                output_dict[ans_id] = unparse_answer(ans)
+        return output_dict
 
     def load_predictions(self, path: str) -> dict:
         full_path = os.path.abspath(path)

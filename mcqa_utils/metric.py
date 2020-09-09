@@ -31,7 +31,9 @@ class C_at_1(Metric_with_no_answer):
                 correct += 1
             elif answer_value == self.no_answer:
                 unanswered += 1
-        return (1 / total) * (correct + (correct / total) * unanswered)
+        value = (1 / total) * (correct + (correct / total) * unanswered)
+        incorrect = total - correct
+        return value, (total, correct, incorrect, unanswered)
 
 
 class Average(Metric):
@@ -46,7 +48,9 @@ class Average(Metric):
             ans_opt = ans.get_answer(accept_no_answer=self.needs_no_answer())
             if gold_ans.get_answer() == ans_opt:
                 correct += 1
-        return correct / total
+        value = (correct / total)
+        incorrect = total - correct
+        return value, (total, correct, incorrect)
 
 
 class F1(Metric_with_no_answer):
@@ -71,3 +75,5 @@ metrics_map = {
     'f1': F1,
     'avg': Average,
 }
+
+metrics_result_prefixes = ['total', 'correct', 'incorrect', 'unanswered']

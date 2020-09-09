@@ -1,6 +1,6 @@
 from typing import List, Union
 
-from mcqa_utils.metric import Metric
+from mcqa_utils.metric import Metric, metrics_result_prefixes
 from mcqa_utils.answer import Answer
 
 
@@ -28,5 +28,9 @@ class GenericEvaluator(Evaluator):
     ) -> float:
         results = {}
         for metric in self.metrics:
-            results[metric.name] = metric(gold_answers, answers)
+            value, stats = metric(gold_answers, answers)
+            prefs = metrics_result_prefixes[:len(stats)]
+            results[metric.name] = value
+            for stat, prefix in zip(stats, prefs):
+                results[f'{metric.name}_{prefix}'] = stat
         return results
