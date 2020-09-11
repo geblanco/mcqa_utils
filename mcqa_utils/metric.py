@@ -32,7 +32,7 @@ class C_at_1(Metric_with_no_answer):
             elif answer_value == self.no_answer:
                 unanswered += 1
         value = (1 / total) * (correct + (correct / total) * unanswered)
-        incorrect = total - correct
+        incorrect = total - correct - unanswered
         return value, (total, correct, incorrect, unanswered)
 
 
