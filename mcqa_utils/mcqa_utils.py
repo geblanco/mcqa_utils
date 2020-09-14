@@ -3,10 +3,9 @@ import json
 import argparse
 
 from pathlib import Path
-from functools import partial
 
 from mcqa_utils.dataset import Dataset
-from mcqa_utils.utils import label_to_id
+from mcqa_utils.utils import get_mask_matching_text
 from mcqa_utils.threshold import Threshold
 from mcqa_utils.metric import metrics_map
 from mcqa_utils.evaluate import GenericEvaluator
@@ -82,29 +81,11 @@ def parse_flags():
     return args
 
 
-def answer_mask_fn(mask_cfg, sample):
-    mask_text = mask_cfg['text'].lower()
-    keep_if_found = mask_cfg['match']
-    ans_index = label_to_id(sample.label)
-    answer = sample.endings[ans_index].lower()
-    found = answer.find(mask_text) != -1
-    keep = (found and keep_if_found) or (not found and not keep_if_found)
-    return keep
-
-
 def get_masks_and_prefix(dataset, no_answer_text, split):
-    partial_answer_mask = partial(
-        answer_mask_fn,
-        {'text': no_answer_text, 'match': False}
-    )
-
-    partial_no_answer_mask = partial(
-        answer_mask_fn,
-        {'text': no_answer_text, 'match': True}
-    )
-
-    answer_mask = dataset.find_mask(split, partial_answer_mask)
-    no_answer_mask = dataset.find_mask(split, partial_no_answer_mask)
+    answer_mask_fn = get_mask_matching_text(no_answer_text, match=False)
+    no_answer_mask_fn = get_mask_matching_text(no_answer_text, match=True)
+    answer_mask = dataset.find_mask(split, answer_mask_fn)
+    no_answer_mask = dataset.find_mask(split, no_answer_mask_fn)
     masks = (answer_mask, no_answer_mask)
     prefix = ('has_ans', 'no_has_ans')
 

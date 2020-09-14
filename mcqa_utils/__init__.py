@@ -23,3 +23,8 @@ from .metric import (
     Average,
     metrics_map,
 )
+
+from .utils import (
+    get_mask_matching_text,
+    answer_mask_fn
+)

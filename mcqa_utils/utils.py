@@ -1,4 +1,5 @@
 from typing import List, Union
+from functools import partial
 
 
 def argmax(values: List[Union[float, int]]) -> Union[float, int]:
@@ -50,3 +51,19 @@ def sort_dict(_dict):
     for key in sorted(_dict.keys()):
         ret[key] = _dict[key]
     return ret
+
+
+def answer_mask_fn(mask_cfg, sample):
+    mask_text = mask_cfg['text'].lower()
+    keep_if_found = mask_cfg['match']
+    ans_index = label_to_id(sample.label)
+    answer = sample.endings[ans_index].lower()
+    found = answer.find(mask_text) != -1
+    keep = (found and keep_if_found) or (not found and not keep_if_found)
+    return keep
+
+
+def get_mask_matching_text(answer_text: str, match: bool):
+    return partial(
+        answer_mask_fn, {'text': answer_text, 'match': match}
+    )
