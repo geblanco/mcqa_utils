@@ -34,6 +34,7 @@ def parse_flags():
     )
     parser.add_argument(
         '-s', '--split', default='dev', required=False,
+        choices=['train', 'dev', 'test'],
         help='Split to evaluate from the dataset'
     )
     parser.add_argument(
@@ -81,11 +82,11 @@ def parse_flags():
     return args
 
 
-def get_masks_and_prefix(dataset, no_answer_text, split):
+def get_masks_and_prefix(dataset, samples, no_answer_text):
     answer_mask_fn = get_mask_matching_text(no_answer_text, match=False)
     no_answer_mask_fn = get_mask_matching_text(no_answer_text, match=True)
-    answer_mask = dataset.find_mask(split, answer_mask_fn)
-    no_answer_mask = dataset.find_mask(split, no_answer_mask_fn)
+    answer_mask = dataset.find_mask(samples, answer_mask_fn)
+    no_answer_mask = dataset.find_mask(samples, no_answer_mask_fn)
     masks = (answer_mask, no_answer_mask)
     prefix = ('has_ans', 'no_has_ans')
 
@@ -162,7 +163,7 @@ def main():
             no_answer_text=args.no_answer_text,
         )
         masks, prefix = get_masks_and_prefix(
-            dataset, args.no_answer_text, split
+            dataset, gold_answers, args.no_answer_text
         )
     else:
         gold_answers = dataset.get_gold_answers(split)

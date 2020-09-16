@@ -134,9 +134,9 @@ class Dataset(object):
 
         return answers
 
-    def find_mask(self, split: Union[List[str], str], test_fn: Callable):
+    def find_mask(self, examples: List[InputExample], test_fn: Callable):
         mask = []
-        for sample in self.get_splits(split):
+        for sample in examples:
             if test_fn(sample):
                 mask.append(1)
             else:
@@ -193,7 +193,14 @@ class Dataset(object):
                 label = ord(ex.label.upper()) - ord('A')
             yield ex.example_id, ex.contexts[0], ex.question, ex.endings, label
 
-    def reduce_by_mask(self, data: List, mask: List) -> List:
+    def reduce_by_mask(
+        self, data: List, mask: Union[List[bool], Callable]
+    ) -> List:
+        if isinstance(mask, Callable):
+            mask = self.find_mask(data, mask)
+        return self._reduce_by_mask_list(data, mask)
+
+    def _reduce_by_mask_list(self, data: List, mask: List[bool]):
         end_list = []
         for point, keep in zip(data, mask):
             if bool(keep):

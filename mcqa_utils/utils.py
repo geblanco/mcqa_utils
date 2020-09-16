@@ -1,6 +1,8 @@
 from typing import List, Union
 from functools import partial
 
+from mc_transformers.utils_mc import InputExample
+
 
 def argmax(values: List[Union[float, int]]) -> Union[float, int]:
     max_val, max_idx = values[0], 0
@@ -23,6 +25,10 @@ def label_to_id(label: Union[str, int, float]) -> int:
             label = ord(label.upper()) - ord('A')
         finally:
             return label
+
+
+def id_to_label(label: int) -> str:
+    return chr(ord('A') + label)
 
 
 def unique(values):
@@ -66,4 +72,16 @@ def answer_mask_fn(mask_cfg, sample):
 def get_mask_matching_text(answer_text: str, match: bool):
     return partial(
         answer_mask_fn, {'text': answer_text, 'match': match}
+    )
+
+
+def update_example(example, **kwargs):
+    dict_example = example.todict()
+    dict_example.update(**kwargs)
+    return InputExample(
+        example_id=dict_example['example_id'],
+        question=dict_example['question'],
+        contexts=dict_example['contexts'],
+        endings=dict_example['endings'],
+        label=dict_example['label'],
     )
