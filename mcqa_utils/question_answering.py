@@ -1,8 +1,10 @@
 import os
 import json
+import numpy as np
 
 from collections import defaultdict
 from typing import Union, Tuple, List
+from mcqa_utils.utils import label_to_id, id_to_label
 from mcqa_utils.answer import (
     parse_answer,
     unparse_answer,
@@ -15,6 +17,7 @@ class QASystem(object):
         self.answers = {}
         self.offline = offline
         self.answers_path = answers_path
+        self.missing_strategy = None
         if offline and answers_path is None:
             raise ValueError(
                 'You must provide a path to the answers '
@@ -24,6 +27,10 @@ class QASystem(object):
     def get_answer(self, example_id: Union[str, int]) -> Answer:
         raise NotImplementedError(
             'You must implement `get_answer` method!')
+
+    def fill_missing(self, example_id: Union[str, int]):
+        raise NotImplementedError(
+            'You must implement `fill_missing` method!')
 
     def get_answers(
         self,
@@ -73,9 +80,52 @@ class QASystemForMCOffline(QASystem):
         # answers are in a dict, ensure string index access
         example_id = str(example_id)
         if example_id not in self.answers:
-            raise ValueError('Example not found %r' % example_id)
+            answer = None
+            if self.missing_strategy is not None:
+                answer = self.fill_missing(example_id, self.get_nof_choices())
+            if answer is not None:
+                self.answers[example_id] = answer
+            else:
+                raise ValueError('Example not found %r' % example_id)
+
+        return self.answers[example_id]
+
+    def get_nof_choices(self) -> int:
+        first_answer = self.answers[list(self.answers.keys())[0]]
+        if first_answer.probs is not None:
+            max_value = len(first_answer.probs)
         else:
-            return self.answers[example_id]
+            max_value = -1
+            for ans in self.answers.values():
+                ans_value = label_to_id(ans.pred_label)
+                if ans_value > max_value:
+                    max_value = ans_value
+        return max_value
+
+    def fill_missing(
+        self, example_id: Union[str, int], nof_choices: int
+    ) -> Answer:
+        answer_dict = dict(
+            example_id=example_id,
+        )
+        if self.missing_strategy.lower() == 'uniform':
+            probs = np.random.uniform(low=0, high=1.0, size=(nof_choices))
+            probs /= sum(probs)
+        else:
+            if self.missing_strategy.lower() == 'random':
+                value = np.random.randint(nof_choices)
+            else:
+                value = int(self.missing_strategy)
+
+            probs = np.zeros(nof_choices).tolist()
+            probs[value] = 1.0
+
+        answer_dict.update(
+            probs=probs,
+            pred_label=id_to_label(np.argmax(probs))
+        )
+
+        return Answer(**answer_dict)
 
     def parse_predictions(self, raw_answers: dict) -> dict:
         answers = {}

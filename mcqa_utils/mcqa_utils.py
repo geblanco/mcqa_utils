@@ -75,6 +75,12 @@ def parse_flags():
         help='Field to use as `probs` field in prediction answers '
         '(default probs, but can be anything parsed in the answer)'
     )
+    parser.add_argument(
+        '-fm', '--fill_missing', default=None, required=False,
+        help='Fill missing answers. Can be filled following a uniform, '
+        'random choosing or giving max probability to certain answer '
+        '(uniform/random/<index of answer>'
+    )
     # ToDo := Add metrics
     args = parser.parse_args()
     if args.nbest_predictions is None and args.predictions is None:
@@ -152,6 +158,8 @@ def main():
     evaluator = GenericEvaluator(metrics=metrics)
     threshold = Threshold(evaluator)
 
+    if args.fill_missing is not None:
+        qa_system.missing_strategy = args.fill_missing
     # when `no_answer_text` is provided, avg can be optimized with the
     # threshold to answer the option with the text corresponding to
     # not being able to solve the question
