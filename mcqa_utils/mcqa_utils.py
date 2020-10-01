@@ -78,8 +78,8 @@ def parse_flags():
     parser.add_argument(
         '-fm', '--fill_missing', default=None, required=False,
         help='Fill missing answers. Can be filled following a uniform, '
-        'random choosing or giving max probability to certain answer '
-        '(uniform/random/<index of answer>'
+        'random choosing or giving a value for all probs '
+        '(uniform/random/value)'
     )
     # ToDo := Add metrics
     args = parser.parse_args()

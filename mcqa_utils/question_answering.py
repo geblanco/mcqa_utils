@@ -114,14 +114,16 @@ class QASystemForMCOffline(QASystem):
         else:
             if self.missing_strategy.lower() == 'random':
                 value = np.random.randint(nof_choices)
+                probs = np.zeros(nof_choices)
+                probs[value] = 1.0
             else:
                 value = int(self.missing_strategy)
-
-            probs = np.zeros(nof_choices).tolist()
-            probs[value] = 1.0
+                probs = np.array([value] * nof_choices)
+                if sum(probs) > 0:
+                    probs /= sum(probs)
 
         answer_dict.update(
-            probs=probs,
+            probs=probs.tolist(),
             pred_label=id_to_label(np.argmax(probs))
         )
 

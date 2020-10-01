@@ -28,7 +28,18 @@ def label_to_id(label: Union[str, int, float]) -> int:
 
 
 def id_to_label(label: int) -> str:
-    return chr(ord('A') + label)
+    if isinstance(label, str):
+        try:
+            # numeric value comes as string
+            label = int(label)
+        except ValueError:
+            # it was in ['A', 'B', 'C', 'D'...]
+            pass
+    if isinstance(label, int):
+        # it was originally a number or a number as string
+        # converted to int
+        label = chr(ord('A') + label)
+    return label
 
 
 def unique(values):

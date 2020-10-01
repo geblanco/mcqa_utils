@@ -5,7 +5,7 @@ from typing import List, Union, Callable
 from collections import defaultdict
 
 from mcqa_utils.answer import Answer
-from mcqa_utils.utils import label_to_id
+from mcqa_utils.utils import label_to_id, id_to_label
 from mc_transformers.utils_mc import processors, DataProcessor, InputExample
 
 
@@ -157,7 +157,7 @@ class Dataset(object):
             json_ex = {
                 'id': id,
                 'article': grouped[0].contexts[0],
-                'answers': [chr(int(ex.label) + ord('A')) for ex in grouped],
+                'answers': [id_to_label(ex.label) for ex in grouped],
                 'options': [ex.endings for ex in grouped],
                 'questions': [ex.question for ex in grouped],
             }

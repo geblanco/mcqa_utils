@@ -1,5 +1,5 @@
 from typing import List, Tuple, Optional, Union
-from mcqa_utils.utils import argmax, label_to_id
+from mcqa_utils.utils import argmax, label_to_id, id_to_label
 
 
 class Answer(object):
@@ -100,7 +100,7 @@ def unparse_answer(answer: Answer) -> Union[dict, int, str]:
     if answer.probs is not None:
         output = dict(pred_label=answer.pred_label, probs=answer.probs)
         if answer.label is not None:
-            output.update(label=answer.label)
+            output.update(label=id_to_label(answer.label))
         if answer.logits is not None:
             output.update(logits=answer.logits)
     return output
