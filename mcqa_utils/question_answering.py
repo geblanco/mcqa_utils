@@ -133,22 +133,32 @@ class QASystemForMCOffline(QASystem):
         answers = {}
         first_answer_key = list(raw_answers.keys())[0]
         # raw_answers can come as predictions or nbest-predictions
+        # when working with reduced datasets, extra null values
+        # are kept to properly match answer ids: if ids are
+        # composed based on the position of the answer (as done
+        # with enumerate in parse method and in transformers' processor,
+        # ids will be unaligned, keeping nulls to avoids this, marking
+        # it as a skip index
         if isinstance(raw_answers[first_answer_key], list):
             for context_id, context_answers in raw_answers.items():
                 for answer_id, answer_value in enumerate(context_answers):
+                    if answer_value is None:
+                        continue
                     if answer_id < 10:
                         answer_id = f'0{answer_id}'
                     qas_id = f'{context_id}-{answer_id}'
                     answers[qas_id] = parse_answer(qas_id, answer_value)
         else:
             for ans_id, ans_value in raw_answers.items():
+                if ans_value is None:
+                    continue
                 answers[ans_id] = parse_answer(ans_id, ans_value)
 
         return answers
 
     def unparse_predictions(self, answers: list = None) -> dict:
         if answers is None:
-            answers = list(self.answers.values())
+            answers = self.get_all_answers()
         first_answer = answers[0]
         if isinstance(unparse_answer(first_answer), (int, str)):
             output_dict = {}
@@ -156,13 +166,49 @@ class QASystemForMCOffline(QASystem):
         else:
             output_dict = defaultdict(list)
             is_nbest_predictions = True
-        for ans in answers:
+        # ids come as <ans_id>-<ex_id> because a context has multiple answers
+        for answer_id, ans in enumerate(answers):
             ans_id = str(ans.example_id)
             if is_nbest_predictions:
                 ans_id = str(ans_id).split('-')[0]
                 output_dict[ans_id].append(unparse_answer(ans))
             else:
                 output_dict[ans_id] = unparse_answer(ans)
+
+        return output_dict
+
+    def unparse_predictions_with_alignment(
+        self, gold_answers: list, answers: list = None
+    ) -> dict:
+        if answers is None:
+            answers = self.get_all_answers()
+        first_answer = answers[0]
+        if isinstance(unparse_answer(first_answer), (int, str)):
+            output_dict = {}
+            is_nbest_predictions = False
+        else:
+            output_dict = defaultdict(list)
+            is_nbest_predictions = True
+        # ids come as <ans_id>-<ex_id> because a context has multiple answers
+        # traverse gold answers searching for valid answers and filling nulls
+        answer_index = 0
+        for gold in gold_answers:
+            gold_id = str(gold.example_id)
+            if (
+                answer_index >= len(answers) or
+                str(answers[answer_index].example_id) != gold_id
+            ):
+                to_append = None
+            else:
+                to_append = unparse_answer(answers[answer_index])
+                answer_index += 1
+
+            if is_nbest_predictions:
+                gold_id = str(gold_id).split('-')[0]
+                output_dict[gold_id].append(to_append)
+            else:
+                output_dict[gold_id] = to_append
+
         return output_dict
 
     def load_predictions(self, path: str) -> dict:
