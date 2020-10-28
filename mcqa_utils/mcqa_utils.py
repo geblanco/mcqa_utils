@@ -189,9 +189,7 @@ def main():
         min_prob = min([ans.get_min_prob() for ans in answers])
         apply_threshold_to_answers(answers, min_prob - 1.0)
 
-    if args.threshold is not None:
-        apply_threshold_to_answers(answers, args.threshold)
-
+    # get results without threshold mangling
     results_dict = get_results(
         dataset,
         evaluator,
@@ -201,8 +199,26 @@ def main():
         prefix,
     )
 
+    # get results with requested threshold (if any)
+    min_prob_pre_threshold = min([ans.get_min_prob() for ans in answers])
+    if args.threshold is not None:
+        apply_threshold_to_answers(answers, args.threshold)
+        results_dict[f'threshold_{args.threshold}'] = get_results(
+            dataset,
+            evaluator,
+            gold_answers,
+            answers,
+            masks,
+            prefix,
+        )
+
+    # find threshold for each requested metric
     if args.find_threshold:
         for metric in metrics:
+            if args.threshold:
+                # reset threshold to ensure fair comparison
+                apply_threshold_to_answers(answers, min_prob_pre_threshold)
+
             best_threshold = threshold.find_best_threshold(
                 metric, gold_answers, answers
             )
