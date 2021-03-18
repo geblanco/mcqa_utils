@@ -1,6 +1,7 @@
+import numpy as np
+
 from typing import List, Union
 from functools import partial
-
 from mc_transformers.utils_mc import InputExample
 
 
