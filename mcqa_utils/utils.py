@@ -14,8 +14,8 @@ def argmax(values: List[Union[float, int]]) -> Union[float, int]:
 
 
 def label_to_id(label: Union[str, int, float]) -> int:
-    if isinstance(label, (int, float)):
-        return label
+    if isinstance(label, (int, np.integer, float, np.floating)):
+        return int(label)
     else:
         try:
             # numeric value comes as string
@@ -35,7 +35,9 @@ def id_to_label(label: int) -> str:
         except ValueError:
             # it was in ['A', 'B', 'C', 'D'...]
             pass
-    if isinstance(label, int):
+    if isinstance(label, (float, np.floating)):
+        label = int(label)
+    if isinstance(label, (int, np.integer)):
         # it was originally a number or a number as string
         # converted to int
         label = chr(ord('A') + label)
