@@ -1,2 +1,2 @@
 mc_transformers==0.1.10
-numpy
+numpy==1.20.3
