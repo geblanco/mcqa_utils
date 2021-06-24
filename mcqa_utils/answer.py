@@ -25,8 +25,10 @@ class Answer(object):
         self.threshold = threshold
         self.no_answer = no_answer
         self.no_answer_text = no_answer_text
-        self.is_no_answer = is_no_answer
         self.probs_field = 'probs'
+        self.is_no_answer = is_no_answer
+        if not is_no_answer and self.pred_label is not None:
+            self.is_no_answer = label_to_id(self.pred_label) == self.no_answer
 
     def get_answer(self, accept_no_answer=True) -> int:
         ans = label_to_id(self.pred_label)
