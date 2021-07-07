@@ -1,5 +1,7 @@
+import numpy as np
 
 from typing import List
+from sklearn.metrics import confusion_matrix
 from mcqa_utils.answer import Answer
 
 
@@ -70,10 +72,39 @@ class F1(Metric_with_no_answer):
         #     pass
 
 
+class ConfusionMatrix(Metric):
+
+    name = 'confusion matrix'
+
+    def __call__(self, gold_answers: List[Answer], answers: List[Answer]):
+        true_labels = [
+            gold.get_answer(accept_no_answer=self.needs_no_answer())
+            for gold in gold_answers
+        ]
+        pred_labels = [
+            ans.get_answer(accept_no_answer=self.needs_no_answer())
+            for ans in answers
+        ]
+        tn, fp, fn, tp = confusion_matrix(true_labels, pred_labels)
+        if isinstance(tn, np.ndarray):
+            tn = tn.tolist()
+            fp = fp.tolist()
+            fn = fn.tolist()
+            tp = tp.tolist()
+
+        return {
+            "true_positive": tp,
+            "false_negative": fn,
+            "false_positive": fp,
+            "true_negative": tn,
+        }, ()
+
+
 metrics_map = {
     'C_at_1': C_at_1,
     'f1': F1,
     'avg': Average,
+    'confusion_matrix': ConfusionMatrix,
 }
 
 metrics_result_prefixes = ['total', 'correct', 'incorrect', 'unanswered']
