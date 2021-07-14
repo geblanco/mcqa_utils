@@ -154,7 +154,9 @@ def print_dataset_stats(args):
     splits = []
     results = defaultdict(list)
     for split in dataset.splits:
-        gold_answers = get_dataset_split(dataset, split)
+        gold_answers = get_dataset_split(
+            dataset, split, with_text_values=args.no_answer_text is not None
+        )
         if gold_answers is None:
             print(f'Split {split} not found in dataset')
             continue
