@@ -3,6 +3,7 @@ import json
 import argparse
 
 from pathlib import Path
+from collections import defaultdict
 
 from mcqa_utils.dataset import Dataset
 from mcqa_utils.utils import get_mask_matching_text
@@ -33,6 +34,10 @@ def parse_flags():
         help='Directory where the dataset is stored'
     )
     parser.add_argument(
+        '-i', '--info', action='store_true',
+        help="Just print info about the dataset"
+    )
+    parser.add_argument(
         '-s', '--split', default='dev', required=False,
         choices=['train', 'dev', 'test'],
         help='Split to evaluate from the dataset'
@@ -51,7 +56,7 @@ def parse_flags():
         help='Apply threshold to all answers'
     )
     parser.add_argument(
-        '-m', '--metrics', nargs='*', required=True,
+        '-m', '--metrics', nargs='*', required=False, default=[],
         help=f'Metrics to apply (available: {", ".join((metrics_map.keys()))})'
     )
     parser.add_argument(
@@ -81,9 +86,16 @@ def parse_flags():
         'random choosing or giving a value for all probs '
         '(uniform/random/value)'
     )
-    # ToDo := Add metrics
     args = parser.parse_args()
-    if args.nbest_predictions is None and args.predictions is None:
+    if not args.info and len(args.metrics) == 0:
+        raise ValueError(
+            "If not printing dataset info, you must request at "
+            "least one metric!"
+        )
+    elif (
+        not args.info and
+        (args.nbest_predictions is None and args.predictions is None)
+    ):
         raise ValueError('You must provide some predictions to evalute!')
     return args
 
@@ -121,11 +133,63 @@ def get_results(
     return results
 
 
-def main():
-    global FLAGS
-    if FLAGS is None:
-        FLAGS = parse_flags()
-    args = FLAGS
+def get_dataset_split(dataset, split, with_text_values=False):
+    gold_answers = None
+    try:
+        gold_answers = dataset.get_gold_answers(
+            split, with_text_values=with_text_values
+        )
+    except Exception:
+        pass
+    finally:
+        return gold_answers
+
+
+def print_dataset_stats(args):
+    # sample table
+    # |                 | train | dev  | test |
+    # | # questions     | 14000 | 4000 | 5000 |
+    # | # unanswerable  | 200   | 100  | 100  |
+    dataset = Dataset(data_path=args.dataset, task=args.task)
+    splits = []
+    results = defaultdict(list)
+    for split in dataset.splits:
+        gold_answers = get_dataset_split(dataset, split)
+        if gold_answers is None:
+            print(f'Split {split} not found in dataset')
+            continue
+
+        results['# questions'].append(len(gold_answers))
+        if args.no_answer_text:
+            no_answer_mask_fn = get_mask_matching_text(
+                args.no_answer_text, match=True
+            )
+            no_answer_mask = dataset.find_mask(gold_answers, no_answer_mask_fn)
+            gold_reduced = dataset.reduce_by_mask(gold_answers, no_answer_mask)
+            results['# unanswerable'].append(len(gold_reduced))
+
+        splits.append(split)
+
+    start_width = max([len(str(key)) for key in results.keys()])
+    width = max([
+        len(str(item)) for values in results.values()
+        for item in values
+    ] + [len(sp) for sp in splits])
+
+    head_fmt = '{:>{mwidth}s}' + '\t{:>{width}s}' * len(splits)
+    results_str = head_fmt.format(
+        "", *splits, mwidth=start_width, width=width
+    ) + '\n'
+    for key, values in results.items():
+        str_values = [str(val) for val in values]
+        results_str += head_fmt.format(
+            key, *str_values, mwidth=start_width, width=width
+        ) + '\n'
+
+    print(results_str)
+
+
+def main(args):
     if args.output is not None:
         output_file = Path(args.output)
         output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -248,4 +312,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    args = parse_flags()
+    if args.info:
+        print_dataset_stats(args)
+    else:
+        main(args)
