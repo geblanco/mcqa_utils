@@ -189,7 +189,7 @@ def print_dataset_stats(args):
     print(results_str)
 
 
-def main(args):
+def mcqa(args):
     if args.output is not None:
         output_file = Path(args.output)
         output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -311,9 +311,13 @@ def main(args):
             fout.write(results_str)
 
 
-if __name__ == '__main__':
+def main():
     args = parse_flags()
     if args.info:
         print_dataset_stats(args)
     else:
-        main(args)
+        mcqa(args)
+
+
+if __name__ == '__main__':
+    main()
