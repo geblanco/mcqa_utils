@@ -86,6 +86,10 @@ def parse_flags():
         'random choosing or giving a value for all probs '
         '(uniform/random/value)'
     )
+    parser.add_argument(
+        "--save_mlflow", action="store_true",
+        help="Stores the given metrics in mlflow (requires package installed)"
+    )
     args = parser.parse_args()
     if not args.info and len(args.metrics) == 0:
         raise ValueError(
@@ -311,6 +315,10 @@ def mcqa(args):
 
         with open(args.output, 'w') as fout:
             fout.write(results_str)
+
+    if args.save_mlflow:
+        import mlflow
+        mlflow.log_metrics(results_dict)
 
 
 def main():
