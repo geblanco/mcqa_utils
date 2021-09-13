@@ -25,17 +25,25 @@ class C_at_1(Metric_with_no_answer):
 
     def __call__(self, gold_answers: List[Answer], answers: List[Answer]):
         correct = 0
+        avg_correct = 0
         unanswered = 0
         total = len(gold_answers)
         for gold_ans, ans in zip(gold_answers, answers):
+            gold_value = gold_ans.get_answer()
             answer_value = ans.get_answer()
-            if gold_ans.get_answer() == answer_value:
+            if gold_value == answer_value:
                 correct += 1
             elif answer_value == self.no_answer:
                 unanswered += 1
+            answer_value = ans_opt.get_answer(accept_no_answer=False)
+            if gold_value == answer_value:
+                avg_correct += 1
         value = (1 / total) * (correct + (correct / total) * unanswered)
         incorrect = total - correct - unanswered
-        return value, (total, correct, incorrect, unanswered)
+        avg_incorrect = total - avg_correct
+        unanswered_correct = avg_correct - correct
+        unanswered_incorrect = avg_incorrect - incorrect
+        return value, (total, correct, incorrect, unanswered, unanswered_correct, unanswered_incorrect)
 
 
 class Average(Metric):
@@ -107,4 +115,11 @@ metrics_map = {
     'confusion_matrix': ConfusionMatrix,
 }
 
-metrics_result_prefixes = ['total', 'correct', 'incorrect', 'unanswered']
+metrics_result_prefixes = [
+    'total',
+    'correct',
+    'incorrect',
+    'unanswered',
+    'unanswered_correct',
+    'unanswered_incorrect',
+]
