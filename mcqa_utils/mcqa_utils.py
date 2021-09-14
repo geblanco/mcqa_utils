@@ -60,6 +60,14 @@ def parse_flags():
         help=f'Metrics to apply (available: {", ".join((metrics_map.keys()))})'
     )
     parser.add_argument(
+        "-uf", "--utility_function", nargs=3,
+        type=float, default=[], action="append",
+        help="Weights for the utility function (implies -m utility_function)."
+        " Tuples of three values are required [unanswered, incorrect, correct"
+        "]. If multiple values are provided, several utility functions will be"
+        " applied"
+    )
+    parser.add_argument(
         '-o', '--output', default=None, required=False,
         help='Whether to put the results (default = stdout)'
     )
@@ -91,7 +99,11 @@ def parse_flags():
         help="Stores the given metrics in mlflow (requires package installed)"
     )
     args = parser.parse_args()
-    if not args.info and len(args.metrics) == 0:
+    # uniq
+    args.metrics = list(set(args.metrics))
+    if not args.info and (
+        len(args.metrics) == 0 and len(args.utility_function) == 0
+    ):
         raise ValueError(
             "If not printing dataset info, you must request at "
             "least one metric!"
@@ -101,6 +113,11 @@ def parse_flags():
         (args.nbest_predictions is None and args.predictions is None)
     ):
         raise ValueError('You must provide some predictions to evalute!')
+
+    # delete metrics with non-default values, will be created separately
+    if len(args.utility_function) > 0 and "utility_function" in args.metrics:
+        del args.metrics[args.metrics.index("utility_function")]
+
     return args
 
 
@@ -219,6 +236,12 @@ def mcqa(args):
     split = args.split
     no_answer = -1
     metrics = [metrics_map[met]() for met in args.metrics]
+    if len(args.utility_function) > 0:
+        for uf in args.utility_function:
+            met = metrics_map["utility_function"]()
+            met.utility = uf
+            metrics.append(met)
+
     for metric in metrics:
         if metric.needs_no_answer():
             metric.no_answer = no_answer
