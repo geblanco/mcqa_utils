@@ -19,6 +19,15 @@ from mcqa_utils.answer import (
 FLAGS = None
 
 
+def parse_utility_fn_str(uf_str):
+    parts = uf_str.split()
+    assert(len(parts) % 3 == 0)
+    return [
+        [float(uf) for uf in parts[i:i + 3]]
+        for i in range(0, len(parts), 3)
+    ]
+
+
 def parse_flags():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -68,6 +77,13 @@ def parse_flags():
         " applied"
     )
     parser.add_argument(
+        "-ufs", "--utility_function_str", type=str, default="",
+        help="Weights for the utility function (passed as string) "
+        "(implies -m utility_function). Tuples of three values are required "
+        "[unanswered, incorrect, correct]. If multiple values are provided, "
+        "several utility functions will be applied"
+    )
+    parser.add_argument(
         '-o', '--output', default=None, required=False,
         help='Whether to put the results (default = stdout)'
     )
@@ -99,6 +115,9 @@ def parse_flags():
         help="Stores the given metrics in mlflow (requires package installed)"
     )
     args = parser.parse_args()
+    args.utility_function.extend(
+        parse_utility_fn_str(args.utility_function_str)
+    )
     # uniq
     args.metrics = list(set(args.metrics))
     if not args.info and (
