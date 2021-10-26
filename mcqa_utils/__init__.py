@@ -2,7 +2,7 @@
 
 __author__ = """Guillermo E. Blanco"""
 __email__ = 'geblanco@lsi.uned.es'
-__version__ = '0.6.0'
+__version__ = '0.7.0'
 
 # flake8: noqa
 
