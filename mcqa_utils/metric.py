@@ -21,8 +21,20 @@ class MetricOutput:
     true_negative: Optional[List[int]] = None
 
 
+class Metric_with_extras(object):
+    has_extras = True
+
+    def add_extras(self, results):
+        """
+        Careful, this method will receive all the previous results,
+        can alter them
+        """
+        raise NotImplementedError()
+
+
 class Metric(object):
     no_answer = None
+    has_extras = False
 
     def __call__(self, gold_answers: List[Answer], answers: List[Answer]):
         raise NotImplementedError()
@@ -35,9 +47,9 @@ class Metric_with_no_answer(Metric):
     no_answer = -1
 
 
-class C_at_1(Metric_with_no_answer):
-
+class C_at_1(Metric_with_no_answer, Metric_with_extras):
     name = "C_at_1"
+    has_extras = True
 
     def __call__(self, gold_answers: List[Answer], answers: List[Answer]):
         correct = 0
@@ -61,6 +73,22 @@ class C_at_1(Metric_with_no_answer):
             incorrect=incorrect,
             unanswered=unanswered,
         )
+
+    def add_extras(self, results):
+        must_fields = [
+            self.name + "_correct",
+            self.name + "_incorrect",
+            Average.name + "_correct",
+            Average.name + "_incorrect",
+        ]
+        test = [results.get(field, None) is not None for field in must_fields]
+        if all(test):
+            un_correct = results[must_fields[2]] - results[must_fields[0]]
+            un_incorrect = results[must_fields[3]] - results[must_fields[1]]
+            results[self.name + "_unanswered_correct"] = un_correct
+            results[self.name + "_unanswered_incorrect"] = un_incorrect
+
+        return results
 
 
 class UtilityFunction(Metric_with_no_answer):

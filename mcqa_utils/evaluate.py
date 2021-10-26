@@ -33,4 +33,9 @@ class GenericEvaluator(Evaluator):
             for key, value in vars(metric_output).items():
                 if key != "value" and value is not None:
                     results[f'{metric.name}_{key}'] = value
+
+        for metric in self.metrics:
+            if metric.has_extras:
+                results = metric.add_extras(results)
+
         return results
